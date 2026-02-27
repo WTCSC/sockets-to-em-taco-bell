@@ -1,6 +1,5 @@
 import socket
 import random
-import threading
 
 HOST = "0.0.0.0"
 
@@ -25,20 +24,22 @@ pokemon_data = {
     "Umbreon": {"hp": 125, "attack": 29},
 }
 
-# Server chooses its Pokémon
+# Choose server Pokémon
 print("Choose your server Pokémon:")
 for name in pokemon_data:
     print("-", name)
 
 while True:
-    server_pokemon_name = input()
+    server_pokemon_name = input("Server Pokémon: ")
     if server_pokemon_name in pokemon_data:
         server_pokemon = pokemon_data[server_pokemon_name].copy()
         break
     else:
         print("Invalid Pokémon. Pick again.")
 
-# Set up server
+server_potions = 3
+
+# Setup server socket
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.bind((HOST, PORT))
 s.listen(1)
@@ -59,25 +60,51 @@ if client_choice not in pokemon_data:
     exit()
 
 client_pokemon = pokemon_data[client_choice].copy()
+client_potions = 3
 conn.send(f"You chose {client_choice}!\nBattle starts!\n".encode())
 
 # Battle loop
-turn = "server"  # server attacks first
+turn = "server"
+
 while server_pokemon["hp"] > 0 and client_pokemon["hp"] > 0:
     if turn == "server":
-        dmg = server_pokemon["attack"] + random.randint(-5, 5)
-        client_pokemon["hp"] -= dmg
-        msg = f"{server_pokemon_name} attacks {client_choice} for {dmg} damage! {client_choice} HP: {client_pokemon['hp']}\n"
-        print(msg)
-        conn.send(msg.encode())
+        print(f"\nYour turn! {server_pokemon_name} HP: {server_pokemon['hp']}, Potions left: {server_potions}")
+        action = input("Choose action (attack/heal): ").strip().lower()
+        if action == "attack":
+            dmg = server_pokemon["attack"] + random.randint(-5, 5)
+            client_pokemon["hp"] -= dmg
+            msg = f"\t{server_pokemon_name} attacks {client_choice} for {dmg} damage! {client_choice} HP: {client_pokemon['hp']}"
+            print(msg)
+            conn.send(msg.encode())
+        elif action == "heal" and server_potions > 0:
+            heal_amount = random.randint(20, 35)
+            server_pokemon["hp"] += heal_amount
+            server_potions -= 1
+            msg = f"\t{server_pokemon_name} uses a potion and heals {heal_amount} HP! HP now: {server_pokemon['hp']}"
+            print(msg)
+            conn.send(msg.encode())
+        else:
+            print("Invalid action or no potions left. Turn skipped.")
+            conn.send(f"{server_pokemon_name} skipped turn.".encode())
         turn = "client"
+
     else:
         conn.send("YOUR TURN\n".encode())
-        dmg = int(conn.recv(1024).decode())
-        server_pokemon["hp"] -= dmg
-        msg = f"{client_choice} attacks {server_pokemon_name} for {dmg} damage! {server_pokemon_name} HP: {server_pokemon['hp']}\n"
-        print(msg)
-        conn.send(msg.encode())
+        # receive client action
+        data = conn.recv(1024).decode().strip().lower()
+        if data.startswith("attack"):
+            dmg = int(data.split()[1])
+            server_pokemon["hp"] -= dmg
+            msg = f"\t{client_choice} attacks {server_pokemon_name} for {dmg} damage! {server_pokemon_name} HP: {server_pokemon['hp']}"
+            print(msg)
+            conn.send(msg.encode())
+        elif data.startswith("heal"):
+            heal_amount = int(data.split()[1])
+            client_pokemon["hp"] += heal_amount
+            client_potions -= 1
+            msg = f"\t{client_choice} heals for {heal_amount} HP! HP now: {client_pokemon['hp']}"
+            print(msg)
+            conn.send(msg.encode())
         turn = "server"
 
 # End of battle
