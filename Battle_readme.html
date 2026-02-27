@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Pokemon Battle Server – Documentation</title>
+
+<style>
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        background: #f5f7fa;
+        color: #222;
+        padding: 40px;
+        line-height: 1.6;
+    }
+    h1, h2, h3 {
+        color: #333;
+    }
+    .section {
+        background: white;
+        padding: 20px;
+        margin-bottom: 30px;
+        border-radius: 8px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+    pre {
+        background: #1e1e1e;
+        color: #dcdcdc;
+        padding: 15px;
+        border-radius: 6px;
+        overflow-x: auto;
+        white-space: pre-wrap;
+    }
+    code {
+        font-size: 15px;
+    }
+</style>
+</head>
+
+<body>
+
+<h1>Pokemon Battle Server – Documentation</h1>
+
+<p>
+This documentation explains how the Pokemon server works, how battles function, and how to connect using
+<strong>client.py</strong>. It covers setup, running the server, running the client, and internal logic of
+battle mechanics and sockets.
+</p>
+
+<div class="section">
+<h2>Overview</h2>
+<p>
+This project is a multiplayer Pokemon battle system using Python sockets. Players connect using
+<strong>client.py</strong>, choose a Pokemon, and battle another connected player.
+</p>
+
+<ul>
+    <li><strong>server.py</strong> – Handles connections, manages players, runs battles.</li>
+    <li><strong>client.py</strong> – Connects to the server, displays messages, sends input.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>Requirements</h2>
+<p>No external libraries are needed. Only built-in Python modules:</p>
+
+<pre><code>socket
+threading
+random</code></pre>
+
+<p>Python 3.8+ recommended.</p>
+</div>
+
+<div class="section">
+<h2>How to Run the Server</h2>
+
+<p>Run:</p>
+
+<pre><code>python server.py</code></pre>
+
+<ul>
+    <li><strong>HOST:</strong> 0.0.0.0</li>
+    <li><strong>PORT:</strong> 5555</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>How to Run the Client</h2>
+
+<p>Each player runs:</p>
+
+<pre><code>python client.py</code></pre>
+
+<p>client.py example:</p>
+
+<pre><code>import socket
+
+HOST = "127.0.0.1"
+PORT = 5555
+
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client.connect((HOST, PORT))
+
+while True:
+    server_msg = client.recv(4096).decode()
+    print(server_msg)
+    if "(input)" in server_msg:
+        client.send(input("> ").encode())
+</code></pre>
+</div>
+
+<div class="section">
+<h2>How Battles Work</h2>
+
+<p>The server uses this Pokemon data structure:</p>
+
+<pre><code>{
+    "Charizard": { "hp": 120, "attack": 30, "art": "ASCII..." },
+    "Gengar":    { "hp": 100, "attack": 35, "art": "ASCII..." },
+    "Mewtwo":    { "hp": 130, "attack": 25, "art": "ASCII..." }
+}</code></pre>
+
+<h3>Battle Steps</h3>
+
+<ol>
+    <li>Players choose a Pokemon.</li>
+    <li>Server sends ASCII art and stats.</li>
+    <li>Turn-based battling starts.</li>
+    <li>Damage = attack stat.</li>
+    <li>First Pokemon to reach 0 HP loses.</li>
+</ol>
+</div>
+
+<div class="section">
+<h2>Server Architecture</h2>
+
+<h3>Threading Model</h3>
+<p>Each client runs in its own thread. When two players are paired, a battle thread starts.</p>
+
+<ul>
+    <li><strong>accept_connections()</strong> – waits for clients</li>
+    <li><strong>client_thread()</strong> – handles individual player</li>
+    <li><strong>battle_thread()</strong> – manages the battle loop</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>Example Gameplay</h2>
+
+<pre><code>Connected to Pokemon Battle Server!
+Choose your Pokemon:
+1) Charizard
+2) Gengar
+3) Mewtwo
+(input)
+
+Waiting for another player...
+
+Battle Start!
+You chose Charizard!
+Opponent chose Gengar!
+
+Your turn! (input)
+> attack
+
+You dealt 30 damage!
+Opponent HP: 70
+
+Opponent attacked you!
+You took 35 damage!
+Your HP: 85
+</code></pre>
+</div>
+
+<div class="section">
+<h2>Networking Diagram</h2>
+
+<pre><code>Player A (client.py)
+       |
+       |----> server.py ----> Battle Logic
+       |
+Player B (client.py)
+</code></pre>
+</div>
+
+<div class="section">
+<h2>Troubleshooting</h2>
+
+<h3>"Connection refused"</h3>
+<ul>
+    <li>Server not running</li>
+    <li>Wrong IP in client.py</li>
+    <li>Firewall blocking port 5555</li>
+</ul>
+
+<h3>ASCII art broken?</h3>
+<p>Your terminal may not support Unicode.</p>
+
+<h3>Battle not starting?</h3>
+<p>You must have two connected clients.</p>
+</div>
+
+</body>
+</html>
