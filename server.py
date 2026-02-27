@@ -3,7 +3,17 @@ import threading
 import random
 
 HOST = "0.0.0.0"
-PORT = 5555
+
+# Ask server user what port to use
+while True:
+    try:
+        PORT = int(input("Enter port to host on (e.g. 5555): "))
+        if 1024 <= PORT <= 65535:
+            break
+        else:
+            print("Port must be between 1024 and 65535.")
+    except ValueError:
+        print("Invalid port. Enter a number.")
 
 # Pokémon stats + ASCII art
 pokemon_data = {
